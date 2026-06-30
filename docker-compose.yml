@@ -1,0 +1,59 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: predictiveops
+      POSTGRES_USER: predictiveops
+      POSTGRES_PASSWORD: predictiveops
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U predictiveops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://predictiveops:predictiveops@database:5432/predictiveops
+      MLFLOW_TRACKING_URI: file:/app/mlflow
+      RISK_THRESHOLD: "0.65"
+      ROOT_CAUSE_MODEL: gpt-4o-mini
+      ALLOWED_ORIGINS: http://localhost:80,http://localhost:5173
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./mlflow:/app/mlflow
+      - ./ml/models:/app/ml/models
+      - ./ml/reports:/app/ml/reports
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

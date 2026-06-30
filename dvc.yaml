@@ -1,0 +1,14 @@
+stages:
+  generate_data:
+    cmd: python backend/scripts/generate_dataset.py
+    outs:
+      - ml/data/raw/synthetic_metrics.csv
+  train:
+    cmd: python backend/scripts/train_model.py
+    deps:
+      - backend/scripts/train_model.py
+      - ml/src
+      - ml/data/raw/synthetic_metrics.csv
+    outs:
+      - ml/models
+      - ml/reports

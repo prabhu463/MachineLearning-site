@@ -24,7 +24,12 @@ class PredictionOrchestrator:
         settings = get_settings()
         self.settings = settings
         self.model_service = IncidentModelService()
-        self.root_cause = RootCauseAnalyzer(settings.root_cause_api_key, settings.root_cause_model)
+        self.root_cause = RootCauseAnalyzer(
+            settings.root_cause_api_key,
+            settings.root_cause_model,
+            base_url=settings.openai_base_url,
+        )
+
 
     def predict(self, db: Session, payload: PredictionRequest, auto_execute: bool = False) -> dict[str, object]:
         metric = create_metric(db, payload)
